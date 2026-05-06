@@ -2,6 +2,7 @@
 # Run with: uvicorn api.main:app --reload
 
 import json
+import os
 import pathlib
 
 import joblib
@@ -10,6 +11,7 @@ import pandas as pd
 import requests
 import shap
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
@@ -116,8 +118,9 @@ def _llm_explain(risk_level: str, probability: float, top_factors: list[dict]) -
         "and what action to consider. Be concise and practical."
     )
     try:
+        ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
         resp = requests.post(
-            "http://localhost:11434/api/generate",
+            f"{ollama_host}/api/generate",
             json={"model": "llama3.2", "prompt": prompt, "stream": False},
             timeout=30,
         )
@@ -130,6 +133,7 @@ def _llm_explain(risk_level: str, probability: float, top_factors: list[dict]) -
 # FastAPI app
 # ---------------------------------------------------------------------------
 app = FastAPI(title="Employee Attrition Prediction API")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 @app.get("/health")

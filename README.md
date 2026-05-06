@@ -40,7 +40,13 @@ Attrition leads to loss of talent, increased recruitment costs, and lowered prod
 
 The frontend predicts attrition probability, risk tier (HIGH / MEDIUM / LOW), SHAP feature impact bars, and an LLM-generated plain-English explanation for HR managers. Preset profiles and a randomizer enable instant testing.
 
-**To run locally:**
+**Docker (recommended):**
+```bash
+docker-compose up
+```
+Then open `http://localhost:3000`. API at `http://localhost:8000`.
+
+**Manual:**
 ```bash
 # Start API (port 8000)
 uvicorn api.main:app --reload
@@ -48,7 +54,6 @@ uvicorn api.main:app --reload
 # Serve frontend (port 3000)
 cd frontend && python3 -m http.server 3000
 ```
-Then open `http://localhost:3000`.
 
 ---
 

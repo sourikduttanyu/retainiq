@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data / large files
+catboost_info/
+mlruns/
+rag_store/
+
+# Dev
+.git/
+.env
+*.log
+node_modules/
+
+# Docs
+*.pdf
+README.md
+PLAN.md
+screenshots/
