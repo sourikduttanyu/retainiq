@@ -13,3 +13,6 @@ jupyter>=1.0
 notebook>=7.0
 ipykernel>=6.0
 scipy>=1.11
+fastapi>=0.111
+uvicorn[standard]>=0.29
+requests>=2.31
