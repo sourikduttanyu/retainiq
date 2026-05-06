@@ -1,6 +1,8 @@
 # Employee Attrition Prediction API
 # Run with: uvicorn api.main:app --reload
 
+import csv
+import io
 import json
 import os
 import pathlib
@@ -10,9 +12,11 @@ import numpy as np
 import pandas as pd
 import requests
 import shap
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from typing import List
 
 # ---------------------------------------------------------------------------
 # Paths — resolve relative to this file so the server can be launched from
@@ -93,15 +97,17 @@ class EmployeeInput(BaseModel):
 # ---------------------------------------------------------------------------
 # Preprocessing
 # ---------------------------------------------------------------------------
-def preprocess(emp: EmployeeInput) -> np.ndarray:
-    row = emp.model_dump()
-    # Convert ordinal ints to strings so get_dummies produces named columns
+def _preprocess_df(df: pd.DataFrame) -> np.ndarray:
+    """Vectorised preprocessing for one or many rows."""
+    df = df.copy()
     for col in _ORDINAL:
-        row[col] = str(row[col])
-    df = pd.DataFrame([row])
+        df[col] = df[col].astype(str)
     df = pd.get_dummies(df, columns=_DUMMIES_COLS)
     df = df.reindex(columns=FEATURE_NAMES, fill_value=0)
     return scaler.transform(df)
+
+def preprocess(emp: EmployeeInput) -> np.ndarray:
+    return _preprocess_df(pd.DataFrame([emp.model_dump()]))
 
 # ---------------------------------------------------------------------------
 # LLM explanation (best-effort)
@@ -191,3 +197,80 @@ def predict(emp: EmployeeInput):
         "shap_explanation": shap_explanation,
         "llm_explanation": llm_explanation,
     }
+
+
+def _risk_label(p: float) -> str:
+    return "HIGH" if p > 0.6 else "MEDIUM" if p >= 0.3 else "LOW"
+
+
+@app.post("/predict/batch")
+def predict_batch(employees: List[EmployeeInput]):
+    """Vectorised batch prediction — no LLM (cost/latency). Up to 1000 rows."""
+    if len(employees) > 1000:
+        raise HTTPException(status_code=400, detail="Max 1000 employees per batch.")
+    if not employees:
+        raise HTTPException(status_code=400, detail="Empty batch.")
+
+    rows = [e.model_dump() for e in employees]
+    try:
+        X = _preprocess_df(pd.DataFrame(rows))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Preprocessing failed: {e}")
+
+    probas = model.predict_proba(X)[:, 1]
+    threshold = metadata["decision_threshold"]
+
+    shap_vals = explainer.shap_values(X)
+    if isinstance(shap_vals, list):
+        sv_matrix = shap_vals[1]
+    else:
+        sv_matrix = shap_vals
+
+    results = []
+    for i, (emp, proba) in enumerate(zip(employees, probas)):
+        sv = sv_matrix[i]
+        top_idx = np.argsort(np.abs(sv))[::-1][:3]
+        results.append({
+            "employee_number": emp.employeenumber,
+            "attrition_probability": round(float(proba), 4),
+            "risk_level": _risk_label(float(proba)),
+            "prediction": "Attrition" if proba >= threshold else "No Attrition",
+            "top_shap_factors": [
+                {"feature": FEATURE_NAMES[j], "shap_value": round(float(sv[j]), 4)}
+                for j in top_idx
+            ],
+        })
+
+    return {"count": len(results), "predictions": results}
+
+
+@app.post("/predict/batch/csv")
+async def predict_batch_csv(file: UploadFile = File(...)):
+    """Upload a CSV with employee columns → download CSV with predictions appended."""
+    content = await file.read()
+    try:
+        df_in = pd.read_csv(io.BytesIO(content))
+        df_in.columns = df_in.columns.str.lower().str.strip()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"CSV parse error: {e}")
+
+    try:
+        X = _preprocess_df(df_in)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Preprocessing failed: {e}")
+
+    probas = model.predict_proba(X)[:, 1]
+    threshold = metadata["decision_threshold"]
+    df_out = df_in.copy()
+    df_out["attrition_probability"] = probas.round(4)
+    df_out["risk_level"] = [_risk_label(float(p)) for p in probas]
+    df_out["prediction"] = ["Attrition" if p >= threshold else "No Attrition" for p in probas]
+
+    buf = io.StringIO()
+    df_out.to_csv(buf, index=False)
+    buf.seek(0)
+    return StreamingResponse(
+        io.BytesIO(buf.getvalue().encode()),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=attrition_predictions.csv"},
+    )
