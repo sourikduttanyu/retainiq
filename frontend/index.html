@@ -205,6 +205,44 @@
     .form-scroll::-webkit-scrollbar-track { background: transparent; }
     .form-scroll::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 4px; }
 
+    .preset-bar {
+      display: flex;
+      gap: 6px;
+      padding: 10px 20px 0;
+      flex-wrap: wrap;
+    }
+    .preset-bar span {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      align-self: center;
+      white-space: nowrap;
+    }
+    .preset-btn {
+      flex: 1;
+      min-width: 80px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-2);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition), border-color var(--transition);
+      white-space: nowrap;
+    }
+    .preset-btn:hover { background: var(--surface-3); color: var(--text-primary); border-color: var(--accent); }
+    .preset-btn.high  { border-color: #ef4444; color: #ef4444; }
+    .preset-btn.high:hover  { background: rgba(239,68,68,.12); }
+    .preset-btn.med   { border-color: #f59e0b; color: #f59e0b; }
+    .preset-btn.med:hover   { background: rgba(245,158,11,.12); }
+    .preset-btn.low   { border-color: #10b981; color: #10b981; }
+    .preset-btn.low:hover   { background: rgba(16,185,129,.12); }
+    .preset-btn.rand  { border-color: var(--accent); color: var(--accent); }
+    .preset-btn.rand:hover  { background: rgba(99,102,241,.12); }
+
     .form-footer {
       padding: 16px 24px;
       border-top: 1px solid var(--border-subtle);
@@ -1148,6 +1186,13 @@
         </form>
       </div><!-- .form-scroll -->
 
+      <div class="preset-bar">
+        <span>Load sample:</span>
+        <button type="button" class="preset-btn high" onclick="loadPreset('high')">⚠ High Risk</button>
+        <button type="button" class="preset-btn med"  onclick="loadPreset('med')">~ Medium Risk</button>
+        <button type="button" class="preset-btn low"  onclick="loadPreset('low')">✓ Low Risk</button>
+        <button type="button" class="preset-btn rand" onclick="loadPreset('random')">⟳ Random</button>
+      </div>
       <div class="form-footer">
         <button type="button" id="submit-btn" onclick="handleSubmit()">
           <div class="btn-spinner"></div>
@@ -1512,6 +1557,91 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    /* ------------------------------------------------------------------
+       Presets & Randomizer
+       ------------------------------------------------------------------ */
+    const PRESETS = {
+      high: {
+        age:28, dailyrate:400, distancefromhome:22, employeenumber:101,
+        hourlyrate:42, monthlyincome:2400, monthlyrate:5000,
+        totalworkingyears:3, yearsatcompany:1,
+        businesstravel:'Travel_Frequently', department:'Sales',
+        educationfield:'Marketing', gender:'Male',
+        jobrole:'Sales Representative', maritalstatus:'Single', overtime:'Yes',
+        education:2, environmentsatisfaction:1, jobinvolvement:2, joblevel:1,
+        jobsatisfaction:1, numcompaniesworked:4, percentsalaryhike:11,
+        performancerating:3, relationshipsatisfaction:1, stockoptionlevel:0,
+        trainingtimeslastyear:0, worklifebalance:1, yearsincurrentrole:1,
+        yearssincelastpromotion:0, yearswithcurrmanager:0,
+      },
+      med: {
+        age:35, dailyrate:800, distancefromhome:10, employeenumber:202,
+        hourlyrate:65, monthlyincome:6000, monthlyrate:14000,
+        totalworkingyears:10, yearsatcompany:5,
+        businesstravel:'Travel_Rarely', department:'Sales',
+        educationfield:'Marketing', gender:'Male',
+        jobrole:'Sales Executive', maritalstatus:'Single', overtime:'Yes',
+        education:3, environmentsatisfaction:2, jobinvolvement:2, joblevel:2,
+        jobsatisfaction:1, numcompaniesworked:3, percentsalaryhike:13,
+        performancerating:3, relationshipsatisfaction:3, stockoptionlevel:0,
+        trainingtimeslastyear:2, worklifebalance:1, yearsincurrentrole:2,
+        yearssincelastpromotion:1, yearswithcurrmanager:2,
+      },
+      low: {
+        age:45, dailyrate:1200, distancefromhome:3, employeenumber:303,
+        hourlyrate:88, monthlyincome:15000, monthlyrate:22000,
+        totalworkingyears:20, yearsatcompany:15,
+        businesstravel:'Non-Travel', department:'Research & Development',
+        educationfield:'Life Sciences', gender:'Female',
+        jobrole:'Research Director', maritalstatus:'Married', overtime:'No',
+        education:5, environmentsatisfaction:4, jobinvolvement:4, joblevel:4,
+        jobsatisfaction:4, numcompaniesworked:1, percentsalaryhike:20,
+        performancerating:4, relationshipsatisfaction:4, stockoptionlevel:3,
+        trainingtimeslastyear:5, worklifebalance:4, yearsincurrentrole:10,
+        yearssincelastpromotion:3, yearswithcurrmanager:8,
+      },
+    };
+
+    const RAND_RANGES = {
+      age:[18,60], dailyrate:[100,1500], distancefromhome:[1,30],
+      employeenumber:[1,9999], hourlyrate:[30,100], monthlyincome:[1000,20000],
+      monthlyrate:[2000,27000], totalworkingyears:[0,40], yearsatcompany:[0,40],
+      education:[1,5], environmentsatisfaction:[1,4], jobinvolvement:[1,4],
+      joblevel:[1,5], jobsatisfaction:[1,4], numcompaniesworked:[0,9],
+      percentsalaryhike:[11,25], performancerating:[3,4], relationshipsatisfaction:[1,4],
+      stockoptionlevel:[0,3], trainingtimeslastyear:[0,6], worklifebalance:[1,4],
+      yearsincurrentrole:[0,18], yearssincelastpromotion:[0,15], yearswithcurrmanager:[0,17],
+    };
+    const RAND_CATS = {
+      businesstravel:['Non-Travel','Travel_Rarely','Travel_Frequently'],
+      department:['Human Resources','Research & Development','Sales'],
+      educationfield:['Human Resources','Life Sciences','Marketing','Medical','Other','Technical Degree'],
+      gender:['Female','Male'],
+      jobrole:['Healthcare Representative','Human Resources','Laboratory Technician','Manager',
+               'Manufacturing Director','Research Director','Research Scientist',
+               'Sales Executive','Sales Representative'],
+      maritalstatus:['Divorced','Married','Single'],
+      overtime:['No','Yes'],
+    };
+
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function rInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+    function loadPreset(key) {
+      let data;
+      if (key === 'random') {
+        data = {};
+        Object.entries(RAND_RANGES).forEach(([k,[mn,mx]]) => data[k] = rInt(mn,mx));
+        Object.entries(RAND_CATS).forEach(([k,vals]) => data[k] = pick(vals));
+      } else {
+        data = PRESETS[key];
+      }
+      Object.entries(data).forEach(([k, v]) => {
+        const el = document.getElementById(k);
+        if (el) { el.value = v; el.classList.remove('invalid'); }
+      });
     }
   </script>
 </body>
