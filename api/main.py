@@ -1,4 +1,4 @@
-# Employee Attrition Prediction API
+# RetainIQ API
 # Run with: uvicorn api.main:app --reload
 
 import csv
@@ -159,7 +159,7 @@ def _llm_explain(risk_level: str, probability: float, top_factors: list[dict], r
 # ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
-app = FastAPI(title="Employee Attrition Prediction API")
+app = FastAPI(title="RetainIQ API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 

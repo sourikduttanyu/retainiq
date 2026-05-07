@@ -1,4 +1,4 @@
-# Employee Attrition Prediction
+# RetainIQ
 
 > XGBoost + FastAPI system that predicts employee attrition probability, explains each prediction with SHAP and retrieval-augmented historical cases, and generates HR briefings via a local LLM — fully containerized.
 
